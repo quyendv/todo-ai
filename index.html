@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todo App</title>
+    <style>
+      .app-container {
+        height: 100vh;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+      }
+      .complete {
+        text-decoration: line-through;
+      }
+      .form-group {
+        display: flex;
+        margin-bottom: 1rem;
+        gap: 8px;
+      }
+      .form-control {
+        padding: 0.5rem;
+        border: 1px solid #ccc;
+        border-radius: 0.25rem;
+        font-size: 1rem;
+      }
+      .btn {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 0.25rem;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+      .btn-primary {
+        background-color: #007bff;
+        color: #fff;
+      }
+      .btn-warning {
+        background-color: #ffc107;
+        color: #212529;
+      }
+      .btn-danger {
+        background-color: #dc3545;
+        color: #fff;
+      }
+      .btn-success {
+        background-color: #28a745;
+        color: #fff;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th,
+      td {
+        padding: 0.5rem;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      tr.table-success {
+        background-color: #d4edda;
+      }
+      tr.table-light {
+        background-color: #f8f9fa;
+      }
+      .filter-group {
+        display: flex;
+        margin-bottom: 1rem;
+      }
+      .filter-group .btn {
+        margin-right: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-container">
+      <h1>Todo App</h1>
+
+      <div class="form-group">
+        <input type="text" class="form-control" id="taskInput" placeholder="Enter a task here" />
+        <button type="button" class="btn btn-primary ml-2" id="saveBtn">Save</button>
+      </div>
+
+      <div class="filter-group">
+        <button class="btn btn-secondary" id="allBtn">All</button>
+        <button class="btn btn-secondary" id="activeBtn">Active</button>
+        <button class="btn btn-secondary" id="completedBtn">Completed</button>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>Todo item</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="taskList"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      const taskInput = document.getElementById('taskInput');
+      const saveBtn = document.getElementById('saveBtn');
+      const taskList = document.getElementById('taskList');
+      const allBtn = document.getElementById('allBtn');
+      const activeBtn = document.getElementById('activeBtn');
+      const completedBtn = document.getElementById('completedBtn');
+
+      let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+      let filteredTasks = tasks;
+
+      function renderTasks() {
+        taskList.innerHTML = '';
+        for (let i = 0; i < filteredTasks.length; i++) {
+          const task = filteredTasks[i];
+          const row = document.createElement('tr');
+          row.classList.add(task.status ? 'table-success' : 'table-light');
+          row.innerHTML = `
+      <td>${i + 1}</td>
+      <td class="${task.status ? 'complete' : ''}">${task.name}</td>
+      <td>${task.status ? 'Completed' : 'In progress'}</td>
+      <td>
+        <button class="btn btn-danger delete-btn">Delete</button>
+        <button class="btn btn-success finish-btn">${task.status ? 'Unfinish' : 'Finish'}</button>
+      </td>
+    `;
+          taskList.appendChild(row);
+        }
+      }
+
+      saveBtn.addEventListener('click', function () {
+        const taskName = taskInput.value.trim();
+        if (taskName) {
+          tasks.push({ name: taskName, status: false });
+          taskInput.value = '';
+          saveToLocalStorage();
+          filterTasks('all');
+        }
+      });
+
+      taskList.addEventListener('click', function (e) {
+        if (e.target.classList.contains('delete-btn')) {
+          const row = e.target.closest('tr');
+          const index = Array.from(taskList.children).indexOf(row);
+          tasks.splice(index, 1);
+          saveToLocalStorage();
+          filterTasks(getActiveFilter());
+        } else if (e.target.classList.contains('finish-btn')) {
+          const row = e.target.closest('tr');
+          const index = Array.from(taskList.children).indexOf(row);
+          tasks[index].status = !tasks[index].status;
+          saveToLocalStorage();
+          filterTasks(getActiveFilter());
+        }
+      });
+
+      function saveToLocalStorage() {
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+      }
+
+      function filterTasks(filter) {
+        switch (filter) {
+          case 'active':
+            filteredTasks = tasks.filter((task) => !task.status);
+            break;
+          case 'completed':
+            filteredTasks = tasks.filter((task) => task.status);
+            break;
+          case 'all':
+          default:
+            filteredTasks = tasks;
+        }
+        renderTasks();
+      }
+
+      function getActiveFilter() {
+        const activeFilter = document.querySelector('.filter-group .btn.active');
+        return activeFilter ? activeFilter.id.replace('Btn', '').toLowerCase() : 'all';
+      }
+
+      allBtn.addEventListener('click', function () {
+        setActiveFilter(this);
+        filterTasks('all');
+      });
+
+      activeBtn.addEventListener('click', function () {
+        setActiveFilter(this);
+        filterTasks('active');
+      });
+
+      completedBtn.addEventListener('click', function () {
+        setActiveFilter(this);
+        filterTasks('completed');
+      });
+
+      function setActiveFilter(button) {
+        const filterButtons = document.querySelectorAll('.filter-group .btn');
+        filterButtons.forEach((btn) => btn.classList.remove('active'));
+        button.classList.add('active');
+      }
+
+      filterTasks('all');
+    </script>
+  </body>
+</html>
